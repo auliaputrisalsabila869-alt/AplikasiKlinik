@@ -1,0 +1,7 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "C:/Users/HP/Downloads/openjfx-17.0.19_windows-x64_bin-sdk/javafx-sdk-17.0.19/lib/*.jar"
+    ],
+    "java.debug.settings.onBuildFailureProceed": true
+}
