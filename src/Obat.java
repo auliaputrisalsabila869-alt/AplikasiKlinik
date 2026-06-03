@@ -18,6 +18,11 @@ public class Obat {
     public String getJenis() { return jenis; }
     public int getStok() { return stok; }
     public double getHarga() { return harga; }
+    
+    @Override
+    public String toString() {
+        return namaObat;
+    }
 
     public void kurangiStok(int jumlah) {
         if (stok >= jumlah) stok -= jumlah;

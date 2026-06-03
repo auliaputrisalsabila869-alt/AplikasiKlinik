@@ -18,12 +18,9 @@ public class JadwalDokter {
 
     public String getIdJadwal() { return idJadwal; }
     public Dokter getDokter() { return dokter; }
+    public Dokter getDoctor() { return dokter; }
     public String getHari() { return hari; }
     public String getJamMulai() { return jamMulai; }
     public String getJamSelesai() { return jamSelesai; }
     public int getKuota() { return kuota; }
-
-    public String[] toTableRow() {
-        return new String[]{idJadwal, dokter.getNama(), hari, jamMulai, jamSelesai, String.valueOf(kuota)};
-    }
 }

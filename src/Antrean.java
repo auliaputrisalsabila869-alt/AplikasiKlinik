@@ -9,6 +9,7 @@ public class Antrean {
     private Map<String, Integer> mapCounter = new HashMap<>();
     private Map<Pasien, String> mapKodeAntrean = new HashMap<>();
     private Map<String, String> mapSedangDitangani = new HashMap<>();
+    private Map<String, Pasien> mapPasienDitangani = new HashMap<>();
 
     public String tambahAntrean(String idDokter, Pasien p) {
         mapQueue.putIfAbsent(idDokter, new LinkedList<>());
@@ -27,6 +28,7 @@ public class Antrean {
             Pasien p = q.poll();
             String kode = mapKodeAntrean.get(p);
             mapSedangDitangani.put(idDokter, kode);
+            mapPasienDitangani.put(idDokter, p);
             return p;
         }
         return null;
@@ -63,6 +65,10 @@ public class Antrean {
         return mapSedangDitangani.getOrDefault(idDokter, "Belum ada");
     }
 
+    public Pasien getPasienSedangDitangani(String idDokter) {
+        return mapPasienDitangani.get(idDokter);
+    }
+
     public int getSisaDidepan(String idDokter, Pasien p) {
         Queue<Pasien> q = mapQueue.get(idDokter);
         if (q == null) return -1;
@@ -73,8 +79,14 @@ public class Antrean {
         }
         return -1;
     }
+
     public void inisialisasiCounter(String idDokter, int nilai) {
-    mapCounter.put(idDokter, nilai);
-    mapQueue.putIfAbsent(idDokter, new LinkedList<>());
-}
+        mapCounter.put(idDokter, nilai);
+        mapQueue.putIfAbsent(idDokter, new LinkedList<>());
+    }
+
+    public Queue<Pasien> getAntrean(String idDokter) {
+        mapQueue.putIfAbsent(idDokter, new LinkedList<>());
+        return this.mapQueue.get(idDokter);
+    }
 }

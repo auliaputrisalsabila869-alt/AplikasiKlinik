@@ -24,6 +24,7 @@ public class Pembayaran {
     public double getBiayaKonsultasi() { return biayaKonsultasi; }
     public double getTotalBayar() { return totalBayar; }
     public String getStatus() { return status; }
+    public String getTanggal() { return tanggal; }
     public RekamMedis getRekamMedis() { return rekamMedis; }
 
     public String[] toTableRow() {

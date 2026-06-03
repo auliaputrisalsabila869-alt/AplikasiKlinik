@@ -25,6 +25,7 @@ public class RekamMedis {
     public String getIdRekamMedis() { return idRekamMedis; }
     public Pasien getPasien() { return pasien; }
     public Dokter getDokter() { return dokter; }
+    public Dokter getDoctor() { return dokter; }
     public String getTanggal() { return tanggal; }
     public String getKeluhan() { return keluhan; }
     public String getDiagnosis() { return diagnosis; }
@@ -36,7 +37,8 @@ public class RekamMedis {
         return total;
     }
 
-    public String[] toTableRow() {
-        return new String[]{idRekamMedis, tanggal, pasien.getNama(), dokter.getNama(), diagnosis};
+    @Override
+    public String toString() {
+        return idRekamMedis + " - " + (pasien != null ? pasien.getNama() : "?");
     }
 }

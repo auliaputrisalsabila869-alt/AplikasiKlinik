@@ -45,6 +45,28 @@ public class DatabaseHelper {
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }
+
+    public static void simpanObat(Obat o) {
+        String sql = "INSERT IGNORE INTO obat VALUES (?,?,?,?,?)";
+        try (Connection c = getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, o.getIdObat());
+            ps.setString(2, o.getNamaObat());
+            ps.setString(3, o.getJenis());
+            ps.setInt(4, o.getStok());
+            ps.setDouble(5, o.getHarga());
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    public static void updateObatStok(Obat o) {
+        String sql = "UPDATE obat SET stok = ? WHERE id_obat = ?";
+        try (Connection c = getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, o.getStok());
+            ps.setString(2, o.getIdObat());
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
     public static void loadPasien(ObservableList<Pasien> list) {
     String sql = "SELECT * FROM pasien";
     try (Connection c = getConnection();

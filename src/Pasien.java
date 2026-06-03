@@ -30,4 +30,7 @@ public class Pasien {
     public String[] toTableRow() {
         return new String[]{idPasien, nama, jenisKelamin, tanggalLahir, noTelp, alamat};
     }
+
+    @Override
+    public String toString() { return nama + " (" + idPasien + ")"; }
 }
