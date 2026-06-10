@@ -4,6 +4,8 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -40,7 +42,7 @@ public class KlinikGUI extends Application {
     private int idDokterCounter = 3;
     private int idObatCounter = 4;
     private int idRMCounter = 1;
-    private int idBayarCounter = 1;
+    private int idBayarCounter = DatabaseHelper.getMaxIdBayarCounter();;
     private int idJadwalCounter = 3;
     private int idResepCounter = 1;
 
@@ -339,11 +341,9 @@ public class KlinikGUI extends Application {
             kartu.add(buatKartu("Pasien", String.valueOf(daftarPasien.size()), "#3498db"), 0, 0);
             kartu.add(buatKartu("Dokter", String.valueOf(daftarDokter.size()), "#2ecc71"), 1, 0);
             kartu.add(buatKartu("Total Antrean", String.valueOf(antrean.getTotalSemuaAntrean()), "#e67e22"), 2, 0);
-            kartu.add(buatKartu("Obat", String.valueOf(daftarObat.size()), "#9b59b6"), 3, 0);
-            kartu.add(buatKartu("Rekam Medis", String.valueOf(daftarRekamMedis.size()), "#e74c3c"), 0, 1);
+            kartu.add(buatKartu("Obat", String.valueOf(daftarObat.size()), "#f81a0b"), 0, 1);
             kartu.add(buatKartu("Jadwal", String.valueOf(daftarJadwal.size()), "#1abc9c"), 1, 1);
-            kartu.add(buatKartu("Resep", String.valueOf(daftarResep.size()), "#2980b9"), 2, 1);
-            kartu.add(buatKartu("Pembayaran", String.valueOf(daftarPembayaran.size()), "#f39c12"), 3, 1);
+            kartu.add(buatKartu("Pembayaran", String.valueOf(daftarPembayaran.size()), "#f39c12"), 2,1);
         }
 
         panel.getChildren().addAll(judul, kartu);
@@ -376,9 +376,26 @@ public class KlinikGUI extends Application {
         Label judul = new Label("Manajemen Pasien");
         judul.setFont(Font.font("Arial", FontWeight.BOLD, 22));
 
+        // Search field
+        TextField txtCari = new TextField();
+        txtCari.setPromptText("Cari pasien (nama, ID, alamat, ...)");
+        txtCari.setStyle("-fx-padding: 8; -fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;");
+        txtCari.setMaxWidth(400);
+
         TableView<Pasien> tabel = new TableView<>();
         tabel.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         VBox.setVgrow(tabel, Priority.ALWAYS);
+
+        // Kolom No urut (tidak dari database)
+        TableColumn<Pasien, Integer> colNo = new TableColumn<>("No");
+        colNo.setCellFactory(col -> new TableCell<Pasien, Integer>() {
+            @Override protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(getIndex() + 1));
+            }
+        });
+        colNo.setPrefWidth(45); colNo.setMinWidth(45); colNo.setMaxWidth(55);
+        colNo.setSortable(false);
 
         TableColumn<Pasien, String> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getIdPasien()));
@@ -393,9 +410,25 @@ public class KlinikGUI extends Application {
         TableColumn<Pasien, String> colAlamat = new TableColumn<>("Alamat");
         colAlamat.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getAlamat()));
 
-        tabel.getColumns().addAll(colId, colNama, colJK, colTgl, colTlp, colAlamat);
+        tabel.getColumns().addAll(colNo, colId, colNama, colJK, colTgl, colTlp, colAlamat);
         ObservableList<Pasien> data = FXCollections.observableArrayList(daftarPasien);
-        tabel.setItems(data);
+
+        // FilteredList untuk pencarian realtime
+        FilteredList<Pasien> filteredData = new FilteredList<>(data, p -> true);
+        txtCari.textProperty().addListener((obs, oldVal, newVal) -> {
+            filteredData.setPredicate(p -> {
+                if (newVal == null || newVal.trim().isEmpty()) return true;
+                String lower = newVal.toLowerCase();
+                return p.getNama().toLowerCase().contains(lower)
+                    || p.getIdPasien().toLowerCase().contains(lower)
+                    || p.getAlamat().toLowerCase().contains(lower)
+                    || p.getNoTelp().toLowerCase().contains(lower)
+                    || p.getJenisKelamin().toLowerCase().contains(lower);
+            });
+        });
+        SortedList<Pasien> sortedData = new SortedList<>(filteredData);
+        sortedData.comparatorProperty().bind(tabel.comparatorProperty());
+        tabel.setItems(sortedData);
 
         HBox tombol = new HBox(10);
         Button btnTambah = new Button("+ Tambah Pasien");
@@ -489,7 +522,7 @@ public class KlinikGUI extends Application {
         });
 
         tombol.getChildren().addAll(btnTambah, btnHapus);
-        panel.getChildren().addAll(judul, tombol, tabel);
+        panel.getChildren().addAll(judul, txtCari, tombol, tabel);
         return panel;
     }
 
@@ -501,9 +534,24 @@ public class KlinikGUI extends Application {
         Label judul = new Label("Manajemen Dokter");
         judul.setFont(Font.font("Arial", FontWeight.BOLD, 22));
 
+        TextField txtCari = new TextField();
+        txtCari.setPromptText("Cari dokter (nama, spesialisasi, ...)");
+        txtCari.setStyle("-fx-padding: 8; -fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;");
+        txtCari.setMaxWidth(400);
+
         TableView<Dokter> tabel = new TableView<>();
         tabel.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         VBox.setVgrow(tabel, Priority.ALWAYS);
+
+        TableColumn<Dokter, Integer> colNo = new TableColumn<>("No");
+        colNo.setCellFactory(col -> new TableCell<Dokter, Integer>() {
+            @Override protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(getIndex() + 1));
+            }
+        });
+        colNo.setPrefWidth(45); colNo.setMinWidth(45); colNo.setMaxWidth(55);
+        colNo.setSortable(false);
 
         TableColumn<Dokter, String> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getIdDokter()));
@@ -514,9 +562,23 @@ public class KlinikGUI extends Application {
         TableColumn<Dokter, String> colTlp = new TableColumn<>("No Telp");
         colTlp.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getNoTelp()));
 
-        tabel.getColumns().addAll(colId, colNama, colSp, colTlp);
+        tabel.getColumns().addAll(colNo, colId, colNama, colSp, colTlp);
         ObservableList<Dokter> data = FXCollections.observableArrayList(daftarDokter);
-        tabel.setItems(data);
+
+        FilteredList<Dokter> filteredData = new FilteredList<>(data, d -> true);
+        txtCari.textProperty().addListener((obs, oldVal, newVal) -> {
+            filteredData.setPredicate(d -> {
+                if (newVal == null || newVal.trim().isEmpty()) return true;
+                String lower = newVal.toLowerCase();
+                return d.getNama().toLowerCase().contains(lower)
+                    || d.getIdDokter().toLowerCase().contains(lower)
+                    || d.getSpesialisasi().toLowerCase().contains(lower)
+                    || d.getNoTelp().toLowerCase().contains(lower);
+            });
+        });
+        SortedList<Dokter> sortedData = new SortedList<>(filteredData);
+        sortedData.comparatorProperty().bind(tabel.comparatorProperty());
+        tabel.setItems(sortedData);
 
         HBox tombol = new HBox(10);
         Button btnTambah = new Button("+ Tambah Dokter");
@@ -581,7 +643,7 @@ public class KlinikGUI extends Application {
         });
 
         tombol.getChildren().addAll(btnTambah, btnHapus);
-        panel.getChildren().addAll(judul, tombol, tabel);
+        panel.getChildren().addAll(judul, txtCari, tombol, tabel);
         return panel;
     }
 
@@ -670,9 +732,24 @@ public class KlinikGUI extends Application {
         Label judul = new Label("Manajemen Obat");
         judul.setFont(Font.font("Arial", FontWeight.BOLD, 22));
 
+        TextField txtCari = new TextField();
+        txtCari.setPromptText("Cari obat (nama, jenis, ...)");
+        txtCari.setStyle("-fx-padding: 8; -fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;");
+        txtCari.setMaxWidth(400);
+
         TableView<Obat> tabel = new TableView<>();
         tabel.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         VBox.setVgrow(tabel, Priority.ALWAYS);
+
+        TableColumn<Obat, Integer> colNo = new TableColumn<>("No");
+        colNo.setCellFactory(col -> new TableCell<Obat, Integer>() {
+            @Override protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(getIndex() + 1));
+            }
+        });
+        colNo.setPrefWidth(45); colNo.setMinWidth(45); colNo.setMaxWidth(55);
+        colNo.setSortable(false);
 
         TableColumn<Obat, String> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getIdObat()));
@@ -685,9 +762,22 @@ public class KlinikGUI extends Application {
         TableColumn<Obat, Double> colHarga = new TableColumn<>("Harga");
         colHarga.setCellValueFactory(cellData -> new SimpleObjectProperty<>(cellData.getValue().getHarga()));
 
-        tabel.getColumns().addAll(colId, colNama, colJenis, colStok, colHarga);
+        tabel.getColumns().addAll(colNo, colId, colNama, colJenis, colStok, colHarga);
         ObservableList<Obat> data = FXCollections.observableArrayList(daftarObat);
-        tabel.setItems(data);
+
+        FilteredList<Obat> filteredData = new FilteredList<>(data, o -> true);
+        txtCari.textProperty().addListener((obs, oldVal, newVal) -> {
+            filteredData.setPredicate(o -> {
+                if (newVal == null || newVal.trim().isEmpty()) return true;
+                String lower = newVal.toLowerCase();
+                return o.getNamaObat().toLowerCase().contains(lower)
+                    || o.getIdObat().toLowerCase().contains(lower)
+                    || o.getJenis().toLowerCase().contains(lower);
+            });
+        });
+        SortedList<Obat> sortedData = new SortedList<>(filteredData);
+        sortedData.comparatorProperty().bind(tabel.comparatorProperty());
+        tabel.setItems(sortedData);
 
         HBox tombol = new HBox(10);
         Button btnTambah = new Button("+ Tambah Obat");
@@ -743,7 +833,7 @@ public class KlinikGUI extends Application {
         });
 
         tombol.getChildren().addAll(btnTambah, btnHapus);
-        panel.getChildren().addAll(judul, tombol, tabel);
+        panel.getChildren().addAll(judul, txtCari, tombol, tabel);
         return panel;
     }
 
@@ -846,9 +936,25 @@ public class KlinikGUI extends Application {
         Label judul = new Label("Pembayaran");
         judul.setFont(Font.font("Arial", FontWeight.BOLD, 22));
 
+        TextField txtCari = new TextField();
+        txtCari.setPromptText("Cari pembayaran (ID, nama pasien, status, ...)");
+        txtCari.setStyle("-fx-padding: 8; -fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;");
+        txtCari.setMaxWidth(400);
+
         TableView<Pembayaran> tabel = new TableView<>();
         tabel.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         VBox.setVgrow(tabel, Priority.ALWAYS);
+
+        // Kolom No urut
+        TableColumn<Pembayaran, Integer> colNo = new TableColumn<>("No");
+        colNo.setCellFactory(col -> new TableCell<Pembayaran, Integer>() {
+            @Override protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(getIndex() + 1));
+            }
+        });
+        colNo.setPrefWidth(45); colNo.setMinWidth(45); colNo.setMaxWidth(55);
+        colNo.setSortable(false);
 
         TableColumn<Pembayaran, String> colId = new TableColumn<>("ID Bayar");
         colId.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getIdPembayaran()));
@@ -858,36 +964,88 @@ public class KlinikGUI extends Application {
         colTgl.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getTanggal()));
         TableColumn<Pembayaran, Double> colTotal = new TableColumn<>("Total (Rp)");
         colTotal.setCellValueFactory(cellData -> new SimpleObjectProperty<>(cellData.getValue().getTotalBayar()));
+
+        // Kolom Status dengan custom cell renderer warna
         TableColumn<Pembayaran, String> colStatus = new TableColumn<>("Status");
         colStatus.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getStatus()));
+        colStatus.setCellFactory(col -> new TableCell<Pembayaran, String>() {
+            @Override
+            protected void updateItem(String status, boolean empty) {
+                super.updateItem(status, empty);
+                if (empty || status == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(status);
+                    String txt = status.toLowerCase();
+                    if (txt.equals("lunas")) {
+                        setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-alignment: CENTER;");
+                    } else {
+                        setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-alignment: CENTER;");
+                    }
+                }
+            }
+        });
 
-        tabel.getColumns().addAll(colId, colPasien, colTgl, colTotal, colStatus);
-        ObservableList<Pembayaran> data = FXCollections.observableArrayList(daftarPembayaran);
-        tabel.setItems(data);
+        tabel.getColumns().addAll(colNo, colId, colPasien, colTgl, colTotal, colStatus);
+
+        // Load data pembayaran dari database
+        ObservableList<Pembayaran> data = FXCollections.observableArrayList();
+        DatabaseHelper.loadPembayaran(data, daftarPasien);
+        // Sinkronkan ke daftarPembayaran in-memory
+        daftarPembayaran.clear();
+        daftarPembayaran.addAll(data);
+
+        FilteredList<Pembayaran> filteredData = new FilteredList<>(data, p -> true);
+        txtCari.textProperty().addListener((obs, oldVal, newVal) -> {
+            filteredData.setPredicate(p -> {
+                if (newVal == null || newVal.trim().isEmpty()) return true;
+                String lower = newVal.toLowerCase();
+                return p.getIdPembayaran().toLowerCase().contains(lower)
+                    || p.getRekamMedis().getPasien().getNama().toLowerCase().contains(lower)
+                    || p.getStatus().toLowerCase().contains(lower)
+                    || p.getTanggal().toLowerCase().contains(lower);
+            });
+        });
+        SortedList<Pembayaran> sortedData = new SortedList<>(filteredData);
+        sortedData.comparatorProperty().bind(tabel.comparatorProperty());
+        tabel.setItems(sortedData);
 
         HBox tombol = new HBox(10);
         Button btnProses = new Button("Proses Pembayaran Baru");
         Button btnLunas = new Button("Tandai Lunas");
+        Button btnRefresh = new Button("Refresh");
         btnProses.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 5;");
         btnLunas.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 5;");
+        btnRefresh.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 5;");
+
+        // Runnable untuk refresh tabel dari DB
+        Runnable refreshDariDB = () -> {
+            DatabaseHelper.loadPembayaran(data, daftarPasien);
+            daftarPembayaran.clear();
+            daftarPembayaran.addAll(data);
+        };
+
+        btnRefresh.setOnAction(e -> refreshDariDB.run());
 
         btnProses.setOnAction(e -> {
-            ArrayList<RekamMedis> rmBelumBayar = new ArrayList<>();
-            for (RekamMedis rm : daftarRekamMedis) {
-                boolean sudahBayar = false;
-                for (Pembayaran p : daftarPembayaran) {
-                    if (p.getRekamMedis().getIdRekamMedis().equals(rm.getIdRekamMedis())) {
-                        sudahBayar = true;
-                        break;
-                    }
-                }
-                if (!sudahBayar) rmBelumBayar.add(rm);
+    ArrayList<RekamMedis> rmBelumBayar = new ArrayList<>();
+    for (RekamMedis rm : daftarRekamMedis) {
+        boolean sudahLunas = false;
+        for (Pembayaran p : daftarPembayaran) {
+            if (p.getRekamMedis().getIdRekamMedis().equals(rm.getIdRekamMedis())
+                    && p.getStatus().equalsIgnoreCase("lunas")) { // <-- tambah cek status
+                sudahLunas = true;
+                break;
             }
+        }
+        if (!sudahLunas) rmBelumBayar.add(rm);
+    }
 
-            if (rmBelumBayar.isEmpty()) {
-                showAlert("Info Pembayaran", "Semua pasien yang selesai diperiksa telah diproses pembayarannya / Belum ada data pemeriksaan baru!");
-                return;
-            }
+    if (rmBelumBayar.isEmpty()) {
+        showAlert("Info Pembayaran", "Semua pasien yang selesai diperiksa telah diproses pembayarannya / Belum ada data pemeriksaan baru!");
+        return;
+    }
 
             Dialog<Pembayaran> dialog = new Dialog<>();
             dialog.setTitle("Proses Pembayaran Baru");
@@ -907,7 +1065,6 @@ public class KlinikGUI extends Application {
             Label lblTotal = new Label("Total Pembayaran: Rp 50000");
             lblTotal.setStyle("-fx-font-weight: bold; -fx-text-fill: #2196F3;");
 
-            // Update preview saat user ubah konsultasi atau pilih pasien berbeda
             Runnable updatePreview = () -> {
                 try {
                     double konsultasi = Double.parseDouble(txtBiaya.getText().trim());
@@ -930,24 +1087,28 @@ public class KlinikGUI extends Application {
             grid.add(lblTotal, 1, 3);
             dialog.getDialogPane().setContent(grid);
 
-                dialog.setResultConverter(btn -> {
-                    if (btn == btnSimpan && cmbRM.getValue() != null) {
-                        String id = String.format("PAY%03d", idBayarCounter++);
-                        double biayaKonsultasi;
-                        try {
-                            biayaKonsultasi = Double.parseDouble(txtBiaya.getText().trim());
-                        } catch (NumberFormatException ex) {
-                            biayaKonsultasi = 0;
-                        }
-                        return new Pembayaran(id, cmbRM.getValue(), biayaKonsultasi,
-                            java.time.LocalDate.now().toString());
+            dialog.setResultConverter(btn -> {
+                if (btn == btnSimpan && cmbRM.getValue() != null) {
+                    String id = String.format("PAY%03d", idBayarCounter++);
+                    double biayaKonsultasi;
+                    try {
+                        biayaKonsultasi = Double.parseDouble(txtBiaya.getText().trim());
+                    } catch (NumberFormatException ex) {
+                        biayaKonsultasi = 0;
+                    }
+                    return new Pembayaran(id, cmbRM.getValue(), biayaKonsultasi,
+                        java.time.LocalDate.now().toString());
                 }
                 return null;
             });
 
             dialog.showAndWait().ifPresent(p -> {
+                // Simpan ke database
+                DatabaseHelper.simpanPembayaran(p);
                 daftarPembayaran.add(p);
-                data.add(p);
+                // Refresh tabel dari DB agar data terbaru tampil
+                refreshDariDB.run();
+                showAlert("Sukses", "Pembayaran " + p.getIdPembayaran() + " berhasil disimpan ke database!");
             });
         });
 
@@ -955,14 +1116,17 @@ public class KlinikGUI extends Application {
             Pembayaran selected = tabel.getSelectionModel().getSelectedItem();
             if (selected != null) {
                 selected.bayar();
-                tabel.refresh();
+                // Update status di database
+                DatabaseHelper.updateStatusPembayaran(selected.getIdPembayaran(), "lunas");
+                // Refresh tabel dari DB
+                refreshDariDB.run();
             } else {
                 showAlert("Peringatan", "Pilih transaksi di tabel terlebih dahulu!");
             }
         });
 
-        tombol.getChildren().addAll(btnProses, btnLunas);
-        panel.getChildren().addAll(judul, tombol, tabel);
+        tombol.getChildren().addAll(btnProses, btnLunas, btnRefresh);
+        panel.getChildren().addAll(judul, txtCari, tombol, tabel);
         return panel;
     }
 
@@ -974,9 +1138,24 @@ public class KlinikGUI extends Application {
         Label judul = new Label("Rekam Medis");
         judul.setFont(Font.font("Arial", FontWeight.BOLD, 22));
 
+        TextField txtCari = new TextField();
+        txtCari.setPromptText("Cari rekam medis (ID, nama pasien, diagnosis, ...)");
+        txtCari.setStyle("-fx-padding: 8; -fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;");
+        txtCari.setMaxWidth(400);
+
         TableView<RekamMedis> tabel = new TableView<>();
         tabel.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         VBox.setVgrow(tabel, Priority.ALWAYS);
+
+        TableColumn<RekamMedis, Integer> colNo = new TableColumn<>("No");
+        colNo.setCellFactory(col -> new TableCell<RekamMedis, Integer>() {
+            @Override protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(getIndex() + 1));
+            }
+        });
+        colNo.setPrefWidth(45); colNo.setMinWidth(45); colNo.setMaxWidth(55);
+        colNo.setSortable(false);
 
         TableColumn<RekamMedis, String> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getIdRekamMedis()));
@@ -989,7 +1168,7 @@ public class KlinikGUI extends Application {
         TableColumn<RekamMedis, String> colDiagnosis = new TableColumn<>("Diagnosis");
         colDiagnosis.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getDiagnosis()));
 
-        tabel.getColumns().addAll(colId, colPasien, colTgl, colKeluhan, colDiagnosis);
+        tabel.getColumns().addAll(colNo, colId, colPasien, colTgl, colKeluhan, colDiagnosis);
 
         ObservableList<RekamMedis> data = FXCollections.observableArrayList();
         if (userLogin.getRole().equals("dokter") && dokterLogin != null) {
@@ -1001,9 +1180,24 @@ public class KlinikGUI extends Application {
         } else {
             data.addAll(daftarRekamMedis);
         }
-        tabel.setItems(data);
 
-        panel.getChildren().addAll(judul, tabel);
+        FilteredList<RekamMedis> filteredData = new FilteredList<>(data, rm -> true);
+        txtCari.textProperty().addListener((obs, oldVal, newVal) -> {
+            filteredData.setPredicate(rm -> {
+                if (newVal == null || newVal.trim().isEmpty()) return true;
+                String lower = newVal.toLowerCase();
+                return rm.getIdRekamMedis().toLowerCase().contains(lower)
+                    || rm.getPasien().getNama().toLowerCase().contains(lower)
+                    || rm.getTanggal().toLowerCase().contains(lower)
+                    || rm.getKeluhan().toLowerCase().contains(lower)
+                    || rm.getDiagnosis().toLowerCase().contains(lower);
+            });
+        });
+        SortedList<RekamMedis> sortedData = new SortedList<>(filteredData);
+        sortedData.comparatorProperty().bind(tabel.comparatorProperty());
+        tabel.setItems(sortedData);
+
+        panel.getChildren().addAll(judul, txtCari, tabel);
 
         if (!readOnly && userLogin.getRole().equals("dokter")) {
             HBox tombol = new HBox(10);
